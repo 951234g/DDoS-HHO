@@ -1,0 +1,1255 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>HHO contra DDoS</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: uma coluna clara, um cartão por etapa, legenda "Como ler" em cada gráfico.
+   Visual claro por escolha, para ler bem em projetor e em sala iluminada. */
+:root {
+  --bg: #f4f6f9;
+  --card: #ffffff;
+  --line: #dfe4ec;
+  --soft: #eef1f6;
+  --ink: #1a2332;
+  --muted: #566278;
+  --normal: #1f5fbf;
+  --normal-soft: #e6effb;
+  --attack: #c9283f;
+  --attack-soft: #fbe8eb;
+  --hawk: #a8531a;
+  --hawk-soft: #f8ebdf;
+  --g0: #7d8fab;
+  --g1: #1b8f78;
+  --g2: #7656cf;
+  --font: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.6 var(--font);
+  padding-block: 32px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1060px; margin: 0 auto; display: grid; gap: 28px; }
+h1, h2, h3, p, ul, ol, dl, dd, figure { margin: 0; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.08; font-weight: 700; letter-spacing: -.01em; text-wrap: balance; }
+h2 { font-size: clamp(1.4rem, 3vw, 1.8rem); line-height: 1.2; font-weight: 600; text-wrap: balance; }
+h3 { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+canvas { display: block; width: 100%; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--normal); outline-offset: 2px; }
+.muted { color: var(--muted); }
+
+/* Cabeçalho */
+.top { display: grid; gap: 14px; max-width: 760px; }
+.eyebrow { font: 500 13px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--hawk); }
+.lede { font-size: 1.15rem; color: var(--muted); }
+.seedbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
+.seedbar input { width: 78px; background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font-family: var(--mono); }
+.status { font: 400 13px var(--mono); color: var(--hawk); min-height: 1.2em; }
+.btn { background: var(--ink); color: #fff; border: 1px solid var(--ink); border-radius: 6px; padding: 8px 16px; cursor: pointer; font-weight: 500; font-size: 15px; }
+.btn:hover { background: #2c3a52; }
+.btn.ghost { background: var(--card); color: var(--ink); border-color: #b9c2d1; }
+.btn.ghost:hover { background: var(--soft); }
+.btn[disabled] { opacity: .55; cursor: progress; }
+
+/* Roteiro e glossário */
+.roadmap { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.roadmap a { display: grid; gap: 4px; height: 100%; padding: 14px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; color: inherit; text-decoration: none; }
+.roadmap a:hover { border-color: var(--ink); }
+.roadmap .n { font: 500 13px var(--mono); color: var(--hawk); }
+.roadmap b { font-size: 17px; }
+.roadmap span:last-child { font-size: 14px; color: var(--muted); line-height: 1.45; }
+.gloss { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; display: grid; gap: 12px; }
+.gloss dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 24px; }
+.gloss dt { font-weight: 600; font-size: 15px; }
+.gloss dd { font-size: 14px; color: var(--muted); line-height: 1.5; }
+
+/* Cartão de etapa */
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: clamp(18px, 3vw, 32px); display: grid; gap: 22px; min-width: 0; scroll-margin-top: 16px; }
+.stage-head { display: flex; align-items: flex-start; gap: 14px; }
+.badgeno { flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font: 600 16px var(--mono); margin-top: 2px; }
+.stage-head > div { display: grid; gap: 6px; min-width: 0; }
+.verb { font: 500 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--hawk); }
+.lead { max-width: 74ch; color: var(--muted); font-size: 1.04rem; }
+.keybox { background: var(--soft); border-radius: 8px; padding: 14px 18px; display: grid; gap: 10px; }
+.key { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 14.5px; }
+.key li { display: flex; align-items: center; gap: 8px; }
+.sw { width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex: none; }
+.sw.sq { border-radius: 2px; }
+.sw.ring { background: transparent; border: 3px solid var(--muted); }
+.defs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 20px; }
+.defs dt { font-weight: 600; font-size: 14px; }
+.defs dd { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+.takeaway { max-width: 74ch; padding: 12px 16px; background: var(--hawk-soft); border-radius: 8px; font-size: 15.5px; }
+.takeaway b { color: var(--hawk); }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.plot { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px 8px; min-width: 0; background: var(--card); }
+.plot h3 { margin-bottom: 6px; }
+.cap { font-size: 13.5px; color: var(--muted); margin-top: 6px; line-height: 1.45; }
+
+/* Etapa 1 */
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.flow { display: grid; min-width: 0; }
+.flow figcaption { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding-bottom: 8px; }
+.flow figcaption b { font-size: 18px; }
+.flow figcaption span { color: var(--muted); font-size: 14.5px; }
+.flow .cvbox { border: 1px solid var(--line); border-radius: 8px 8px 0 0; background: #fff; overflow: hidden; }
+.meters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 8px 8px; overflow: hidden; }
+.meters > div { padding: 10px 12px; min-width: 0; border-left: 1px solid var(--line); }
+.meters > div:first-child { border-left: 0; }
+.meters dt { font-size: 12.5px; line-height: 1.3; color: var(--muted); }
+.meters dd { font: 500 1.3rem/1.25 var(--mono); font-variant-numeric: tabular-nums; }
+.flow-n .meters { background: var(--normal-soft); }
+.flow-n .meters dd { color: var(--normal); }
+.flow-a .meters { background: var(--attack-soft); }
+.flow-a .meters dd { color: var(--attack); }
+.dot-n { background: var(--normal); }
+.dot-a { background: var(--attack); }
+
+/* Etapa 2 */
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th { font-size: 12.5px; font-weight: 600; color: var(--muted); text-align: left; padding: 10px 14px; background: var(--soft); white-space: nowrap; }
+td { padding: 9px 14px; border-top: 1px solid var(--line); white-space: nowrap; }
+td.num, th.num { text-align: right; }
+td.idx { font: 400 13px var(--mono); color: var(--muted); }
+td.vn { color: var(--normal); font-family: var(--mono); font-size: 14px; }
+td.va { color: var(--attack); font-family: var(--mono); font-size: 14px; }
+.sepcell { display: flex; align-items: center; gap: 10px; min-width: 210px; }
+.sep { flex: 1; height: 8px; background: var(--soft); border-radius: 4px; overflow: hidden; min-width: 70px; }
+.sep > i { display: block; height: 100%; background: #9aa6ba; border-radius: 4px; }
+.lvl { font-size: 12.5px; font-weight: 600; min-width: 4.2em; color: var(--muted); }
+.lvl.f { color: var(--ink); }
+td.pick { text-align: center; }
+.pickmark { display: inline-block; font: 600 12px var(--mono); color: var(--hawk); background: var(--hawk-soft); border-radius: 10px; padding: 2px 10px; }
+tr.picked td:nth-child(2) { font-weight: 600; }
+tr.picked .sep > i { background: var(--hawk); }
+
+/* Etapa 3 */
+.hho { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 18px; align-items: start; }
+.gridpanel { display: grid; gap: 6px; }
+.hrow { display: grid; grid-template-columns: 10px 24px minmax(0, 1fr); align-items: center; gap: 8px; }
+.cells { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 2px; }
+.cells i { display: block; height: 13px; background: var(--soft); border-radius: 2px; }
+.cells i.on { background: #3b4a66; }
+.hrow.rb .cells i { height: 18px; }
+.hrow.rb .cells i.on { background: var(--hawk); }
+.hrow .hn { font: 400 11px var(--mono); color: var(--muted); }
+.hrow.rb .hn { color: var(--hawk); font-weight: 500; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+.hrow.head .cells span { font: 400 10px var(--mono); color: var(--muted); text-align: center; }
+.rbtag { font-size: 13px; color: var(--hawk); font-weight: 600; }
+.sepline { height: 1px; background: var(--line); margin: 4px 0; }
+.chartstack { display: grid; gap: 18px; min-width: 0; }
+.scrub { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.scrub input[type=range] { flex: 1 1 220px; min-width: 0; accent-color: var(--hawk); }
+.scrub output { font: 500 14px var(--mono); min-width: 12ch; }
+.story { display: grid; gap: 4px; padding: 14px 18px; border-left: 4px solid var(--hawk); background: var(--hawk-soft); border-radius: 0 8px 8px 0; min-height: 4.6em; }
+.story b { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--hawk); font-weight: 600; }
+.story p { font-size: 16px; }
+.readout { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.readout > div { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; display: grid; gap: 2px; min-width: 0; }
+.readout .k { font-size: 12.5px; color: var(--muted); }
+.readout .v { font: 500 1.15rem/1.3 var(--mono); font-variant-numeric: tabular-nums; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chips .lab { font-size: 14px; color: var(--muted); margin-right: 4px; }
+.chip { font-size: 14px; font-weight: 500; color: var(--hawk); background: var(--hawk-soft); border-radius: 14px; padding: 3px 12px; }
+.formula { font-size: 14px; color: var(--muted); }
+.formula code { font-family: var(--mono); font-size: 13px; color: var(--ink); background: var(--soft); border-radius: 4px; padding: 2px 6px; }
+
+/* Etapa 4 */
+.live { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.badge { font-weight: 700; font-size: 1.05rem; letter-spacing: .04em; text-transform: uppercase; padding: 7px 18px; border-radius: 6px; background: var(--normal-soft); color: var(--normal); min-width: 10em; text-align: center; }
+.badge.alert { background: var(--attack); color: #fff; }
+.livetxt { font: 400 14px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.result { padding: 14px 18px; border-radius: 8px; background: var(--soft); font-size: 16px; display: grid; gap: 4px; }
+.result b { color: var(--hawk); }
+.cmp { min-width: 540px; }
+.cmp th, .cmp td { white-space: normal; }
+.cmp td.best { font-family: var(--mono); font-weight: 500; color: var(--hawk); background: #fdf7f1; }
+.cmp td.other { font-family: var(--mono); }
+.cmp th:last-child { color: var(--hawk); }
+
+.foot { display: grid; gap: 10px; max-width: 78ch; }
+.foot p { font-size: 14px; color: var(--muted); }
+
+@media (max-width: 900px) {
+  .roadmap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gloss dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .defs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hho { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .pair { grid-template-columns: minmax(0, 1fr); }
+  .meters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .meters > div:nth-child(3) { border-left: 0; }
+  .meters > div:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .roadmap, .gloss dl, .defs { grid-template-columns: minmax(0, 1fr); }
+  .readout { grid-template-columns: minmax(0, 1fr); }
+  .stage-head { gap: 10px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cells i { transition: background-color .12s linear; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <p class="eyebrow">Harris Hawks Optimizer · detecção de intrusão</p>
+    <h1>Como o HHO ajuda a detectar um ataque DDoS</h1>
+    <p class="lede">Um ataque DDoS derruba um servidor inundando-o de pedidos vindos de milhares de origens ao mesmo tempo. Esta página mostra, em quatro passos, como um algoritmo inspirado na caça do gavião-de-Harris ajuda a perceber isso.</p>
+    <form id="seedForm" class="seedbar">
+      <label for="seed">Dados de exemplo, semente</label>
+      <input id="seed" type="number" min="1" max="9999" value="16" inputmode="numeric">
+      <button class="btn ghost" id="seedGo" type="submit">Gerar outros dados</button>
+      <span class="status" id="status" role="status">Calculando…</span>
+    </form>
+  </header>
+
+  <ol class="roadmap">
+    <li><a href="#etapa-1"><span class="n">PASSO 1</span><b>Observar</b><span>Compare o tráfego normal com o ataque.</span></a></li>
+    <li><a href="#etapa-2"><span class="n">PASSO 2</span><b>Medir</b><span>Resuma o tráfego em 14 números por segundo.</span></a></li>
+    <li><a href="#etapa-3"><span class="n">PASSO 3</span><b>Otimizar</b><span>O HHO escolhe os números que realmente ajudam.</span></a></li>
+    <li><a href="#etapa-4"><span class="n">PASSO 4</span><b>Detectar</b><span>Use essa escolha para disparar o alerta.</span></a></li>
+  </ol>
+
+  <section class="gloss" aria-labelledby="tg">
+    <h3 id="tg">Termos usados nesta página</h3>
+    <dl>
+      <div><dt>DDoS</dt><dd>Ataque em que muitas máquinas enviam pedidos ao mesmo alvo para deixá-lo lento ou fora do ar.</dd></div>
+      <div><dt>SYN</dt><dd>Pedido para abrir uma conexão. No ataque SYN flood, a maioria é enviada e nunca concluída.</dd></div>
+      <div><dt>Janela</dt><dd>Um trecho de 1 segundo de tráfego, resumido em uma linha de números.</dd></div>
+      <div><dt>Característica</dt><dd>Um desses números, como pacotes por segundo ou quantidade de IPs de origem.</dd></div>
+      <div><dt>kNN</dt><dd>Classificador simples: compara a janela nova com as 5 mais parecidas já conhecidas e vota entre normal e ataque.</dd></div>
+      <div><dt>Gavião e presa</dt><dd>Cada gavião é uma combinação de características testada. A presa é a melhor combinação achada até agora.</dd></div>
+    </dl>
+  </section>
+
+  <section class="card" id="etapa-1" aria-labelledby="t1">
+    <div class="stage-head">
+      <span class="badgeno" aria-hidden="true">1</span>
+      <div>
+        <p class="verb">Observar</p>
+        <h2 id="t1">O que chega ao servidor: tráfego normal e ataque</h2>
+      </div>
+    </div>
+    <p class="lead">Cada ponto que corre até o servidor é um pacote de rede. No tráfego normal, poucos clientes enviam em ritmo estável. No ataque, centenas de origens falsificadas enviam sem parar, e o servidor fica sobrecarregado.</p>
+    <div class="pair">
+      <figure class="flow flow-n">
+        <figcaption><b>Tráfego normal</b><span>poucos clientes, ritmo estável</span></figcaption>
+        <div class="cvbox"><canvas id="cvN" role="img" aria-label="Animação de pacotes azuis vindos de poucos clientes até o servidor, que opera com carga baixa."></canvas></div>
+        <dl class="meters">
+          <div><dt>Pacotes por segundo</dt><dd id="nPkts">1.200</dd></div>
+          <div><dt>IPs de origem</dt><dd id="nIps">85</dd></div>
+          <div><dt>Pacotes SYN</dt><dd id="nSyn">10%</dd></div>
+          <div><dt>Conexões incompletas</dt><dd id="nInc">5%</dd></div>
+        </dl>
+      </figure>
+      <figure class="flow flow-a">
+        <figcaption><b>Ataque DDoS</b><span>enxurrada de pacotes, muitas origens</span></figcaption>
+        <div class="cvbox"><canvas id="cvA" role="img" aria-label="Animação de uma enxurrada de pacotes vermelhos vindos de dezenas de origens até o servidor, que fica sobrecarregado."></canvas></div>
+        <dl class="meters">
+          <div><dt>Pacotes por segundo</dt><dd id="aPkts">14.000</dd></div>
+          <div><dt>IPs de origem</dt><dd id="aIps">2.400</dd></div>
+          <div><dt>Pacotes SYN</dt><dd id="aSyn">55%</dd></div>
+          <div><dt>Conexões incompletas</dt><dd id="aInc">35%</dd></div>
+        </dl>
+      </figure>
+    </div>
+    <div class="keybox">
+      <h3>Como ler</h3>
+      <ul class="key">
+        <li><i class="sw dot-n"></i>Pacote de tráfego legítimo</li>
+        <li><i class="sw dot-a"></i>Pacote do ataque</li>
+        <li><i class="sw ring"></i>Anel do servidor: quanto da capacidade está em uso</li>
+      </ul>
+      <dl class="defs">
+        <div><dt>Pacotes por segundo</dt><dd>Quantos pacotes chegam a cada segundo.</dd></div>
+        <div><dt>IPs de origem</dt><dd>Quantos endereços diferentes estão enviando.</dd></div>
+        <div><dt>Pacotes SYN</dt><dd>Parte dos pacotes que são pedidos de abrir conexão.</dd></div>
+        <div><dt>Conexões incompletas</dt><dd>Pedidos que o servidor aceitou e ninguém terminou.</dd></div>
+      </dl>
+    </div>
+    <div class="tools"><button class="btn ghost" id="btnFlow" type="button">Pausar animação</button></div>
+    <p class="takeaway"><b>Para perceber:</b> no ataque aparecem muito mais pacotes, muito mais origens e muitos pedidos SYN sem conclusão. Mas atenção: um pico legítimo de acessos, como uma promoção, também aumenta pacotes e IPs. Olhar só o volume engana.</p>
+  </section>
+
+  <section class="card" id="etapa-2" aria-labelledby="t2">
+    <div class="stage-head">
+      <span class="badgeno" aria-hidden="true">2</span>
+      <div>
+        <p class="verb">Medir</p>
+        <h2 id="t2">Transformar o tráfego em 14 números</h2>
+      </div>
+    </div>
+    <p class="lead">A cada segundo, o sistema resume o tráfego em 14 características. Algumas separam bem o ataque do tráfego normal, outras ajudam pouco, e algumas só atrapalham, como a hora do dia. Quanto mais longa a barra, melhor a característica distingue os dois casos.</p>
+    <div class="tablewrap">
+      <table id="featTable">
+        <thead>
+          <tr><th>Nº</th><th>Característica</th><th class="num">Normal (média)</th><th class="num">Ataque (média)</th><th>Quanto separa os casos</th><th>Escolhida pelo HHO</th></tr>
+        </thead>
+        <tbody id="featBody"></tbody>
+      </table>
+    </div>
+    <div class="keybox">
+      <h3>Como ler</h3>
+      <ul class="key">
+        <li><i class="sw sq" style="background:#9aa6ba"></i>Barra cinza: separação entre normal e ataque (d de Cohen, medido nos 240 exemplos de treino)</li>
+        <li><i class="sw sq" style="background:var(--hawk)"></i>Barra marrom: característica que o HHO escolheu</li>
+      </ul>
+    </div>
+    <p class="takeaway"><b>Para perceber:</b> o HHO não enxerga esta tabela. Ele só vê o erro do classificador para cada combinação que testa, e mesmo assim costuma ficar com as características fortes e descartar as repetidas e as inúteis. Veja no passo seguinte.</p>
+  </section>
+
+  <section class="card" id="etapa-3" aria-labelledby="t3">
+    <div class="stage-head">
+      <span class="badgeno" aria-hidden="true">3</span>
+      <div>
+        <p class="verb">Otimizar</p>
+        <h2 id="t3">O bando de gaviões procura a melhor combinação</h2>
+      </div>
+    </div>
+    <p class="lead">Cada gavião é uma combinação de características: quadrado preenchido quer dizer que ela é usada, vazio que é ignorada. O gavião que erra menos vira a presa, e o bando se aproxima dela. No começo, os gaviões exploram combinações novas. Depois, cercam a presa para refiná-la. Use o botão ou o controle para acompanhar cada iteração.</p>
+    <div class="scrub">
+      <button class="btn" id="btnPlay3" type="button">Reproduzir</button>
+      <input id="slider3" type="range" min="0" max="40" value="40" step="1" aria-label="Iteração do HHO">
+      <output id="out3" for="slider3">iteração 40 de 40</output>
+    </div>
+    <div class="story" aria-live="off"><b>O que está acontecendo</b><p id="story3"></p></div>
+    <div class="hho">
+      <div class="plot gridpanel">
+        <h3>Os 20 gaviões e a presa</h3>
+        <div class="hrow head"><span></span><span></span><div class="cells" id="colHead"></div></div>
+        <div class="hrow rb" id="rabbitRow"></div>
+        <div class="sepline"></div>
+        <div id="popGrid"></div>
+        <p class="cap">Colunas: número da característica na tabela do passo 2. Linha marrom: a presa, a melhor combinação até agora. Pontos à esquerda: estratégia que cada gavião usou nesta iteração.</p>
+      </div>
+      <div class="chartstack">
+        <div class="plot">
+          <h3>A melhor combinação melhora</h3>
+          <canvas id="cvFit" role="img" aria-label="Gráfico da fitness da melhor máscara ao longo das iterações."></canvas>
+          <p class="cap">Quanto mais baixa a linha, melhor. A fitness soma o erro do classificador e uma pequena penalidade por usar muitas características.</p>
+        </div>
+        <div class="plot">
+          <h3>O que o bando faz a cada iteração</h3>
+          <canvas id="cvMix" role="img" aria-label="Barras empilhadas com a contagem de gaviões por estratégia em cada iteração."></canvas>
+          <ul class="key" id="mixLegend" style="margin-top:8px"></ul>
+          <p class="cap">Cada barra tem 20 gaviões. Na primeira metade a energia de fuga E ainda pode passar de 1 e há exploração. Depois, todos só cercam a presa.</p>
+        </div>
+      </div>
+    </div>
+    <div class="readout">
+      <div><span class="k">Fase do algoritmo</span><span class="v" id="r3phase"></span></div>
+      <div><span class="k">Erro da presa (validação)</span><span class="v" id="r3err"></span></div>
+      <div><span class="k">Características usadas</span><span class="v" id="r3n"></span></div>
+    </div>
+    <div class="chips" id="r3chips" aria-label="Características escolhidas pela presa"></div>
+    <p class="formula">Fitness = <code>0,95 × erro do kNN + 0,05 × (características usadas ÷ 14)</code>. Uma característica fica ativa quando a coordenada do gavião é positiva.</p>
+  </section>
+
+  <section class="card" id="etapa-4" aria-labelledby="t4">
+    <div class="stage-head">
+      <span class="badgeno" aria-hidden="true">4</span>
+      <div>
+        <p class="verb">Detectar</p>
+        <h2 id="t4">O alerta em um fluxo de 2 minutos</h2>
+      </div>
+    </div>
+    <p class="lead">Agora o classificador usa só as características escolhidas pelo HHO. Entre 14 s e 22 s há um pico legítimo de acessos, que não é ataque. O ataque real começa em 42 s, sobe em 5 s e termina em 88 s. O alerta só dispara depois de 3 janelas seguidas marcadas como ataque, o que evita alarme por erro isolado.</p>
+    <div class="live">
+      <span class="badge" id="badge4">Normal</span>
+      <span class="livetxt" id="live4"></span>
+    </div>
+    <div class="plot">
+      <canvas id="cvStream" role="img" aria-label="Linha do tempo de pacotes por segundo com o ataque real, o pico legítimo e as janelas classificadas como ataque."></canvas>
+    </div>
+    <div class="keybox">
+      <h3>Como ler</h3>
+      <ul class="key">
+        <li><i class="sw dot-n"></i>Linha azul: janela classificada como normal</li>
+        <li><i class="sw dot-a"></i>Linha vermelha: janela classificada como ataque</li>
+        <li><i class="sw sq" style="background:var(--attack-soft);border:1px solid var(--attack)"></i>Faixa vermelha: ataque real</li>
+        <li><i class="sw sq" style="background:var(--hawk-soft);border:1px solid var(--hawk)"></i>Faixa marrom: pico legítimo, não é ataque</li>
+      </ul>
+      <p class="cap" style="margin:0">As três tiras abaixo do gráfico têm um quadrado por segundo. A primeira é a verdade, a segunda é a decisão do HHO com kNN e a terceira é a decisão do kNN com as 14 características.</p>
+    </div>
+    <div class="scrub">
+      <button class="btn" id="btnPlay4" type="button">Reproduzir fluxo</button>
+      <input id="slider4" type="range" min="0" max="119" value="119" step="1" aria-label="Instante do fluxo em segundos">
+      <output id="out4" for="slider4">t = 119 s</output>
+    </div>
+    <div class="result" id="res4"></div>
+    <div class="tablewrap">
+      <table class="cmp" id="cmpTable">
+        <thead><tr><th>Medida</th><th>kNN com as 14 características</th><th>HHO + kNN</th></tr></thead>
+        <tbody id="cmpBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p>Os dados são sintéticos e nascem da semente informada. O acerto de 99,34% citado no artigo vem de outro estudo, com o conjunto NSL-KDD, e não é reproduzido aqui.</p>
+    <p>O resultado muda com a semente. Em 40 sementes testadas na construção desta página, o kNN com 14 características acertou 93,7% em média e o HHO acertou 93,4% usando 5,5 características em média. O ganho esperado é processar menos dados com acerto parecido, e em algumas sementes o subconjunto escolhido erra mais.</p>
+  </footer>
+</div>
+
+<script>
+/* ===== Núcleo: dados sintéticos, kNN, HHO binário ===== */
+const D = 14, N_HAWKS = 20, T_ITER = 40, K_NN = 5;
+const LB = -4, UB = 4, W_ERR = 0.95, BETA = 1.5;
+const NTR = 240, NVA = 120, NTE = 200;
+const NSTREAM = 120, ATT_START = 42, ATT_END = 88, FLASH_START = 14, FLASH_END = 22;
+
+const FEATS = [
+  { id: 'pkts_s',    nome: 'Pacotes por segundo',             un: 'pkt/s', fmt: 'int' },
+  { id: 'bytes_s',   nome: 'Volume de dados',                 un: 'KB/s',  fmt: 'int' },
+  { id: 'tam_pkt',   nome: 'Tamanho médio do pacote',         un: 'B',     fmt: 'int' },
+  { id: 'ips_orig',  nome: 'IPs de origem distintos',         un: '',      fmt: 'int' },
+  { id: 'prop_syn',  nome: 'Proporção de pacotes SYN',        un: '',      fmt: 'pct' },
+  { id: 'incompl',   nome: 'Conexões incompletas',            un: '',      fmt: 'pct' },
+  { id: 'ent_ip',    nome: 'Entropia dos IPs de origem',      un: 'bits',  fmt: 'd1'  },
+  { id: 'ent_porta', nome: 'Entropia das portas de destino',  un: 'bits',  fmt: 'd1'  },
+  { id: 'dp_iat',    nome: 'Desvio do intervalo entre pacotes', un: 'ms',  fmt: 'd1'  },
+  { id: 'dur_fluxo', nome: 'Duração média do fluxo',          un: 's',     fmt: 'd1'  },
+  { id: 'prop_rst',  nome: 'Proporção de pacotes RST',        un: '',      fmt: 'pct' },
+  { id: 'prop_udp',  nome: 'Proporção de tráfego UDP',        un: '',      fmt: 'pct' },
+  { id: 'ttl',       nome: 'TTL médio',                       un: '',      fmt: 'int' },
+  { id: 'hora',      nome: 'Hora do dia',                     un: 'h',     fmt: 'int' }
+];
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function gauss(rng) {
+  let u = 0, v = 0;
+  while (u === 0) u = rng();
+  while (v === 0) v = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+
+/* [média normal, desvio normal, média ataque, desvio ataque] */
+const PAR = {
+  pkts:     [1200, 320, 14000, 4500],
+  tam:      [620, 170, 260, 120],
+  ips:      [85, 25, 2400, 900],
+  syn:      [0.10, 0.05, 0.55, 0.22],
+  entIp:    [4.3, 0.8, 8.0, 1.8],
+  entPorta: [2.8, 1.0, 1.8, 1.0],
+  iat:      [18, 8, 8, 5],
+  dur:      [14, 7, 3.5, 2.5],
+  rst:      [0.04, 0.025, 0.09, 0.07],
+  udp:      [0.18, 0.09, 0.20, 0.10],
+  ttl:      [58, 9, 60, 10]
+};
+const draw = (p, a, rng) => lerp(p[0], p[2], a) + gauss(rng) * lerp(p[1], p[3], a);
+
+/* Uma janela de 1 s de tráfego.
+   a = intensidade do ataque (0 = normal, 1 = pleno).
+   f = pico legítimo (flash crowd): muita gente de verdade acessando ao mesmo tempo.
+   O pico eleva pacotes e IPs como um ataque, mas não muda SYN, duração nem tamanho. */
+function genWindow(a, rng, f) {
+  f = f || 0;
+  const av = Math.max(a, f);
+  const pkts = Math.max(200, draw(PAR.pkts, av, rng));
+  const tam = clamp(draw(PAR.tam, a, rng), 60, 1400);
+  const ips = Math.max(5, draw(PAR.ips, av, rng));
+  const syn = clamp(draw(PAR.syn, a, rng), 0.005, 0.99);
+  const incompl = clamp(lerp(0.45, 0.75, a) * syn + gauss(rng) * lerp(0.03, 0.10, a), 0, 1);
+  const entIp = Math.max(0.5, draw(PAR.entIp, a, rng) + f * 1.2);
+  const entPorta = Math.max(0.1, draw(PAR.entPorta, a, rng));
+  const iat = Math.max(0.3, draw(PAR.iat, a, rng) - f * 4);
+  const dur = Math.max(0.1, draw(PAR.dur, a, rng));
+  const rst = clamp(draw(PAR.rst, a, rng), 0, 1);
+  const udp = clamp(draw(PAR.udp, a, rng), 0, 1);
+  const ttl = clamp(draw(PAR.ttl, a, rng), 20, 128);
+  const hora = rng() * 24;
+  return [pkts, pkts * tam / 1000, tam, ips, syn, incompl, entIp, entPorta, iat, dur, rst, udp, ttl, hora];
+}
+
+function makeSet(n, rng) {
+  const X = [], y = [];
+  for (let i = 0; i < n; i++) {
+    const c = i % 2;
+    const a = c ? 0.3 + 0.7 * rng() : 0;
+    const f = !c && rng() < 0.3 ? 0.3 + 0.6 * rng() : 0;
+    X.push(genWindow(a, rng, f));
+    y.push(c);
+  }
+  return { X, y };
+}
+
+function fitScaler(X) {
+  const mean = new Array(D).fill(0), sd = new Array(D).fill(0);
+  for (const x of X) for (let d = 0; d < D; d++) mean[d] += x[d] / X.length;
+  for (const x of X) for (let d = 0; d < D; d++) sd[d] += (x[d] - mean[d]) ** 2 / X.length;
+  for (let d = 0; d < D; d++) sd[d] = Math.sqrt(sd[d]) || 1;
+  return { mean, sd };
+}
+const scaleRow = (x, sc) => x.map((v, d) => (v - sc.mean[d]) / sc.sd[d]);
+
+/* Erro de validação de um kNN (k = 5) usando só as características da máscara. */
+function makeEvaluator(Xtr, ytr, Xva, yva) {
+  const nTr = Xtr.length, nVa = Xva.length;
+  const d2 = [];
+  for (let f = 0; f < D; f++) {
+    const arr = new Float32Array(nVa * nTr);
+    for (let v = 0; v < nVa; v++)
+      for (let j = 0; j < nTr; j++) {
+        const df = Xva[v][f] - Xtr[j][f];
+        arr[v * nTr + j] = df * df;
+      }
+    d2.push(arr);
+  }
+  const dist = new Float32Array(nTr);
+  const kd = new Float64Array(K_NN), kl = new Int8Array(K_NN);
+  return function (mask) {
+    const sel = [];
+    for (let f = 0; f < D; f++) if (mask[f]) sel.push(d2[f]);
+    if (!sel.length) return 1;
+    let wrong = 0;
+    for (let v = 0; v < nVa; v++) {
+      dist.fill(0);
+      const base = v * nTr;
+      for (let s = 0; s < sel.length; s++) {
+        const arr = sel[s];
+        for (let j = 0; j < nTr; j++) dist[j] += arr[base + j];
+      }
+      kd.fill(Infinity);
+      for (let j = 0; j < nTr; j++) {
+        const dj = dist[j];
+        if (dj < kd[K_NN - 1]) {
+          let p = K_NN - 1;
+          while (p > 0 && kd[p - 1] > dj) { kd[p] = kd[p - 1]; kl[p] = kl[p - 1]; p--; }
+          kd[p] = dj; kl[p] = ytr[j];
+        }
+      }
+      let votes = 0;
+      for (let q = 0; q < K_NN; q++) votes += kl[q];
+      if ((votes * 2 > K_NN ? 1 : 0) !== yva[v]) wrong++;
+    }
+    return wrong / nVa;
+  };
+}
+
+function makePredictor(Xtr, ytr) {
+  const nTr = Xtr.length;
+  const kd = new Float64Array(K_NN), kl = new Int8Array(K_NN);
+  return function (x, idx) {
+    kd.fill(Infinity);
+    for (let j = 0; j < nTr; j++) {
+      let dj = 0;
+      const xt = Xtr[j];
+      for (let s = 0; s < idx.length; s++) { const df = x[idx[s]] - xt[idx[s]]; dj += df * df; }
+      if (dj < kd[K_NN - 1]) {
+        let p = K_NN - 1;
+        while (p > 0 && kd[p - 1] > dj) { kd[p] = kd[p - 1]; kl[p] = kl[p - 1]; p--; }
+        kd[p] = dj; kl[p] = ytr[j];
+      }
+    }
+    let votes = 0;
+    for (let q = 0; q < K_NN; q++) votes += kl[q];
+    return votes * 2 > K_NN ? 1 : 0;
+  };
+}
+
+/* Função gama (Lanczos) para o sigma do voo de Lévy (Equação 13). */
+function gammaFn(z) {
+  const g = 7, c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+    771.32342877765313, -176.61502916214059, 12.507343278686905,
+    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+  if (z < 0.5) return Math.PI / (Math.sin(Math.PI * z) * gammaFn(1 - z));
+  z -= 1;
+  let x = c[0];
+  for (let i = 1; i < g + 2; i++) x += c[i] / (z + i);
+  const t = z + g + 0.5;
+  return Math.sqrt(2 * Math.PI) * Math.pow(t, z + 0.5) * Math.exp(-t) * x;
+}
+const SIGMA = Math.pow(
+  (gammaFn(1 + BETA) * Math.sin(Math.PI * BETA / 2)) /
+  (gammaFn((1 + BETA) / 2) * BETA * Math.pow(2, (BETA - 1) / 2)), 1 / BETA);
+
+function levy(rng) {
+  const out = new Float64Array(D);
+  for (let d = 0; d < D; d++)
+    out[d] = 0.01 * gauss(rng) * SIGMA / Math.pow(Math.abs(gauss(rng)), 1 / BETA);
+  return out;
+}
+
+/* Estratégias: 0 exploração, 1 cerco suave, 2 cerco rígido, 3 mergulhos (suave), 4 mergulhos (rígido). */
+function runHHO(evalErr, rng) {
+  const toMask = (x) => { const m = new Uint8Array(D); for (let d = 0; d < D; d++) m[d] = x[d] > 0 ? 1 : 0; return m; };
+  const fitOf = (mask) => {
+    let n = 0; for (let d = 0; d < D; d++) n += mask[d];
+    if (!n) return { f: 1, err: 1, n: 0 };
+    const err = evalErr(mask);
+    return { f: W_ERR * err + (1 - W_ERR) * n / D, err, n };
+  };
+  const X = [], F = [];
+  for (let i = 0; i < N_HAWKS; i++) {
+    const x = new Float64Array(D);
+    for (let d = 0; d < D; d++) x[d] = LB + rng() * (UB - LB);
+    X.push(x); F.push(fitOf(toMask(x)));
+  }
+  let rabbit = new Float64Array(D), rbest = { f: Infinity, err: 1, n: 0 };
+  const upd = (x, fo) => { if (fo.f < rbest.f) { rbest = fo; rabbit = Float64Array.from(x); } };
+  for (let i = 0; i < N_HAWKS; i++) upd(X[i], F[i]);
+
+  const hist = [];
+  const snap = (k, strat) => hist.push({
+    k, masks: X.map(toMask), strat: strat.slice(),
+    best: rbest.f, err: rbest.err, n: rbest.n, mask: toMask(rabbit)
+  });
+  snap(0, new Array(N_HAWKS).fill(-1));
+
+  const clip = (v) => (v < LB ? LB : v > UB ? UB : v);
+  for (let t = 0; t < T_ITER; t++) {
+    const Xm = new Float64Array(D);
+    for (const x of X) for (let d = 0; d < D; d++) Xm[d] += x[d] / N_HAWKS;
+    const strat = new Array(N_HAWKS);
+    for (let i = 0; i < N_HAWKS; i++) {
+      const xi = X[i];
+      const E0 = 2 * rng() - 1, E = 2 * E0 * (1 - t / T_ITER), aE = Math.abs(E);
+      const nx = new Float64Array(D);
+      let s;
+      if (aE >= 1) {                                   // exploração (Eq. 2)
+        s = 0;
+        const q = rng(), r1 = rng(), r2 = rng(), r3 = rng(), r4 = rng();
+        if (q >= 0.5) {
+          const xr = X[Math.floor(rng() * N_HAWKS)];
+          for (let d = 0; d < D; d++) nx[d] = clip(xr[d] - r1 * Math.abs(xr[d] - 2 * r2 * xi[d]));
+        } else {
+          for (let d = 0; d < D; d++) nx[d] = clip((rabbit[d] - Xm[d]) - r3 * (LB + r4 * (UB - LB)));
+        }
+        X[i] = nx; F[i] = fitOf(toMask(nx));
+      } else {
+        const r = rng(), J = 2 * (1 - rng());
+        if (r >= 0.5) {
+          if (aE >= 0.5) {                             // cerco suave (Eq. 5)
+            s = 1;
+            for (let d = 0; d < D; d++) nx[d] = clip((rabbit[d] - xi[d]) - E * Math.abs(J * rabbit[d] - xi[d]));
+          } else {                                     // cerco rígido (Eq. 7)
+            s = 2;
+            for (let d = 0; d < D; d++) nx[d] = clip(rabbit[d] - E * Math.abs(rabbit[d] - xi[d]));
+          }
+          X[i] = nx; F[i] = fitOf(toMask(nx));
+        } else {                                       // mergulhos rápidos (Eq. 8/9, 10, 11)
+          s = aE >= 0.5 ? 3 : 4;
+          const ref = aE >= 0.5 ? xi : Xm;
+          const Y = new Float64Array(D);
+          for (let d = 0; d < D; d++) Y[d] = clip(rabbit[d] - E * Math.abs(J * rabbit[d] - ref[d]));
+          const fy = fitOf(toMask(Y));
+          if (fy.f < F[i].f) { X[i] = Y; F[i] = fy; }
+          else {
+            const L = levy(rng), Z = new Float64Array(D);
+            for (let d = 0; d < D; d++) Z[d] = clip(Y[d] + rng() * L[d]);
+            const fz = fitOf(toMask(Z));
+            if (fz.f < F[i].f) { X[i] = Z; F[i] = fz; }
+          }
+        }
+      }
+      strat[i] = s;
+      upd(X[i], F[i]);
+    }
+    snap(t + 1, strat);
+  }
+  return { hist, mask: toMask(rabbit) };
+}
+
+/* Alarme: liga após 3 janelas seguidas marcadas como ataque, desliga após 3 normais. */
+function alarmSeries(preds) {
+  const out = []; let on = false, run1 = 0, run0 = 0;
+  for (let t = 0; t < preds.length; t++) {
+    if (preds[t]) { run1++; run0 = 0; } else { run0++; run1 = 0; }
+    if (!on && run1 >= 3) on = true;
+    if (on && run0 >= 3) on = false;
+    out.push(on);
+  }
+  return out;
+}
+
+function streamMetrics(preds, truth) {
+  const alarm = alarmSeries(preds);
+  let fp = 0, miss = 0, nN = 0, nA = 0;
+  for (let t = 0; t < preds.length; t++) {
+    if (truth[t]) { nA++; if (!preds[t]) miss++; } else { nN++; if (preds[t]) fp++; }
+  }
+  let first = -1;
+  for (let t = ATT_START; t < ATT_END; t++) if (alarm[t]) { first = t; break; }
+  return { alarm, fp, miss, nN, nA, alertT: first, delay: first < 0 ? null : first - ATT_START };
+}
+
+function buildExperiment(seed) {
+  const rngD = mulberry32(seed * 7919 + 1);
+  const rngH = mulberry32(seed * 104729 + 2);
+  const rngS = mulberry32(seed * 15485863 + 3);
+  const tr = makeSet(NTR, rngD), va = makeSet(NVA, rngD), te = makeSet(NTE, rngD);
+  const sc = fitScaler(tr.X);
+  const Ztr = tr.X.map((x) => scaleRow(x, sc));
+  const Zva = va.X.map((x) => scaleRow(x, sc));
+  const Zte = te.X.map((x) => scaleRow(x, sc));
+  const evalErr = makeEvaluator(Ztr, tr.y, Zva, va.y);
+  const hho = runHHO(evalErr, rngH);
+  const predict = makePredictor(Ztr, tr.y);
+  const allIdx = Array.from({ length: D }, (_, d) => d);
+  const selIdx = allIdx.filter((d) => hho.mask[d]);
+
+  const acc = (idx) => {
+    let ok = 0;
+    for (let i = 0; i < Zte.length; i++) if (predict(Zte[i], idx) === te.y[i]) ok++;
+    return ok / Zte.length;
+  };
+  const accAll = acc(allIdx), accSel = acc(selIdx);
+
+  /* Estatísticas por classe (treino, valores brutos) e separação (d de Cohen). */
+  const stats = [];
+  for (let d = 0; d < D; d++) {
+    const g = [[], []];
+    tr.X.forEach((x, i) => g[tr.y[i]].push(x[d]));
+    const m = g.map((a) => a.reduce((s, v) => s + v, 0) / a.length);
+    const v = g.map((a, c) => a.reduce((s, x) => s + (x - m[c]) ** 2, 0) / a.length);
+    const sdp = Math.sqrt((v[0] + v[1]) / 2) || 1;
+    stats.push({ mN: m[0], mA: m[1], sep: Math.abs(m[1] - m[0]) / sdp });
+  }
+
+  /* Fluxo de 2 minutos com um ataque que sobe em 5 s. */
+  const raw = [], truth = [], zs = [];
+  for (let t = 0; t < NSTREAM; t++) {
+    const a = t >= ATT_START && t < ATT_END ? Math.min(1, (t - ATT_START + 1) / 5) : 0;
+    const f = t >= FLASH_START && t < FLASH_END ? 0.75 : 0;
+    const x = genWindow(a, rngS, f);
+    raw.push(x); truth.push(a > 0 ? 1 : 0); zs.push(scaleRow(x, sc));
+  }
+  const predSel = zs.map((z) => predict(z, selIdx));
+  const predAll = zs.map((z) => predict(z, allIdx));
+  return {
+    seed, hho, selIdx, accAll, accSel, stats,
+    stream: { raw, truth, predSel, predAll,
+      mSel: streamMetrics(predSel, truth), mAll: streamMetrics(predAll, truth) }
+  };
+}
+
+if (typeof module !== 'undefined') {
+  module.exports = { buildExperiment, FEATS, D, T_ITER, SIGMA, genWindow, mulberry32 };
+}
+
+/* ===== Interface ===== */
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const rs = getComputedStyle(document.documentElement);
+  const cv = (n) => rs.getPropertyValue(n).trim();
+  const C = {
+    card: cv('--card'), line: cv('--line'), soft: cv('--soft'), ink: cv('--ink'), muted: cv('--muted'),
+    normal: cv('--normal'), attack: cv('--attack'), hawk: cv('--hawk'),
+    g: [cv('--g0'), cv('--g1'), cv('--g2')]
+  };
+  const MONO = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* 5 estratégias do algoritmo agrupadas em 3 famílias para leitura mais simples. */
+  const GROUP = [0, 1, 1, 2, 2];
+  const GROUPS = [
+    { nome: 'Exploração', det: 'Eq. 2: pousa em pontos novos' },
+    { nome: 'Cerco', det: 'Eq. 5 e 7: aproxima-se da presa' },
+    { nome: 'Mergulhos rápidos', det: 'Eq. 8 a 11: testa saltos de Lévy' }
+  ];
+
+  const nf = (n, d) => n.toLocaleString('pt-BR', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+  const pct = (x, d) => nf(x * 100, d === undefined ? 1 : d) + '%';
+  function fmtFeat(f, v) {
+    if (f.fmt === 'pct') return pct(v, 0);
+    const s = nf(v, f.fmt === 'd1' ? 1 : 0);
+    return f.un ? s + ' ' + f.un : s;
+  }
+  function el(tag, cls, txt) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (txt !== undefined) e.textContent = txt;
+    return e;
+  }
+  function fit(canvas, h) {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = Math.max(120, canvas.clientWidth);
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    canvas.style.height = h + 'px';
+    const c = canvas.getContext('2d');
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { c, w, h };
+  }
+  function rgba(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+
+  /* ---------- Passo 1: fluxos de pacotes ---------- */
+  function Flow(canvas, attack) {
+    const H = 270;
+    let g = fit(canvas, H), srcs = [], parts = [], acc = 0;
+    function layout() {
+      g = fit(canvas, H);
+      const rng = mulberry32(attack ? 91 : 17);
+      srcs = [];
+      const n = attack ? 64 : 7;
+      for (let i = 0; i < n; i++) {
+        if (attack) srcs.push({ x: 14 + rng() * g.w * 0.42, y: 16 + rng() * (H - 52) });
+        else srcs.push({ x: 24 + (i % 2) * 34, y: 24 + i * ((H - 76) / (n - 1)) });
+      }
+    }
+    const sx = () => g.w - 72, sy = () => H / 2 - 10;
+    function step(dt, now) {
+      acc += (attack ? 340 : 15) * dt / 1000;
+      while (acc >= 1) {
+        const s = srcs[(Math.random() * srcs.length) | 0];
+        parts.push({ x0: s.x, y0: s.y, t0: now, dur: (attack ? 1000 : 1500) * (0.8 + Math.random() * 0.4) });
+        acc -= 1;
+      }
+      parts = parts.filter((p) => now - p.t0 < p.dur);
+    }
+    function render(now) {
+      const c = g.c, col = attack ? C.attack : C.normal;
+      c.clearRect(0, 0, g.w, H);
+      c.fillStyle = rgba(col, 0.45);
+      for (const s of srcs) { c.beginPath(); c.arc(s.x, s.y, attack ? 2.6 : 4.5, 0, 6.2832); c.fill(); }
+      for (const p of parts) {
+        const u = (now - p.t0) / p.dur, u2 = Math.max(0, u - 0.08);
+        const x = p.x0 + (sx() - p.x0) * u, y = p.y0 + (sy() - p.y0) * u;
+        const xt = p.x0 + (sx() - p.x0) * u2, yt = p.y0 + (sy() - p.y0) * u2;
+        c.strokeStyle = rgba(col, attack ? 0.28 : 0.4);
+        c.lineWidth = attack ? 1 : 1.4;
+        c.beginPath(); c.moveTo(xt, yt); c.lineTo(x, y); c.stroke();
+        c.fillStyle = col;
+        c.beginPath(); c.arc(x, y, attack ? 1.5 : 2.5, 0, 6.2832); c.fill();
+      }
+      const X = sx(), Y = sy(), load = attack ? 1 : 0.16;
+      if (attack && !reduce) {
+        const k = 0.5 + 0.5 * Math.sin(now / 130);
+        c.fillStyle = rgba(C.attack, 0.08 + 0.1 * k);
+        c.beginPath(); c.arc(X, Y, 46 + 6 * k, 0, 6.2832); c.fill();
+      }
+      c.lineWidth = 6; c.strokeStyle = C.soft;
+      c.beginPath(); c.arc(X, Y, 36, 0, 6.2832); c.stroke();
+      c.strokeStyle = col;
+      c.beginPath(); c.arc(X, Y, 36, -Math.PI / 2, -Math.PI / 2 + 6.2832 * load); c.stroke();
+      c.fillStyle = C.soft;
+      c.beginPath(); c.arc(X, Y, 27, 0, 6.2832); c.fill();
+      c.fillStyle = col;
+      for (let i = -1; i <= 1; i++) { c.fillRect(X - 11, Y + i * 8 - 2.5, 22, 5); }
+      c.textAlign = 'center';
+      c.font = '600 13px "IBM Plex Sans", system-ui, sans-serif';
+      c.fillStyle = C.ink;
+      c.fillText('Servidor', X, Y + 62);
+      c.font = '12px "IBM Plex Sans", system-ui, sans-serif';
+      c.fillStyle = col;
+      c.fillText(attack ? 'sobrecarregado' : 'carga baixa', X, Y + 79);
+      c.textAlign = 'left';
+      c.font = '600 13px "IBM Plex Sans", system-ui, sans-serif';
+      c.fillStyle = C.ink;
+      c.fillText(attack ? 'Origens do ataque (centenas)' : 'Clientes legítimos (poucos)', 14, H - 12);
+    }
+    layout();
+    return { step, render, layout };
+  }
+
+  const flowN = Flow($('cvN'), false), flowA = Flow($('cvA'), true);
+  let clock = 0, playing = !reduce, last = performance.now();
+  for (let i = 0; i < 110; i++) { clock += 16; flowN.step(16, clock); flowA.step(16, clock); }
+  flowN.render(clock); flowA.render(clock);
+  function loop(ts) {
+    const dt = Math.min(50, ts - last); last = ts;
+    if (playing) {
+      clock += dt;
+      flowN.step(dt, clock); flowA.step(dt, clock);
+      flowN.render(clock); flowA.render(clock);
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+  $('btnFlow').textContent = playing ? 'Pausar animação' : 'Iniciar animação';
+  $('btnFlow').addEventListener('click', () => {
+    playing = !playing;
+    $('btnFlow').textContent = playing ? 'Pausar animação' : 'Iniciar animação';
+  });
+  function liveMeters() {
+    const n = genWindow(0, Math.random), a = genWindow(1, Math.random);
+    $('nPkts').textContent = nf(n[0]); $('nIps').textContent = nf(n[3]);
+    $('nSyn').textContent = pct(n[4], 0); $('nInc').textContent = pct(n[5], 0);
+    $('aPkts').textContent = nf(a[0]); $('aIps').textContent = nf(a[3]);
+    $('aSyn').textContent = pct(a[4], 0); $('aInc').textContent = pct(a[5], 0);
+  }
+  liveMeters();
+  setInterval(() => { if (playing) liveMeters(); }, 900);
+
+  /* ---------- Passo 2: tabela de características ---------- */
+  function renderTable(exp) {
+    const body = $('featBody');
+    body.innerHTML = '';
+    const maxSep = Math.max.apply(null, exp.stats.map((s) => s.sep));
+    const order = FEATS.map((_, d) => d).sort((a, b) => exp.stats[b].sep - exp.stats[a].sep);
+    order.forEach((d) => {
+      const f = FEATS[d], s = exp.stats[d], picked = exp.hho.mask[d] === 1;
+      const tr = el('tr', picked ? 'picked' : '');
+      tr.appendChild(el('td', 'idx', String(d + 1).padStart(2, '0')));
+      tr.appendChild(el('td', '', f.nome));
+      tr.appendChild(el('td', 'num vn', fmtFeat(f, s.mN)));
+      tr.appendChild(el('td', 'num va', fmtFeat(f, s.mA)));
+      const td = el('td'), box = el('div', 'sepcell'), bar = el('div', 'sep'), fill = el('i');
+      const lvl = s.sep >= 1.4 ? 'Forte' : s.sep >= 0.8 ? 'Média' : 'Fraca';
+      fill.style.width = Math.max(2, (s.sep / maxSep) * 100) + '%';
+      bar.appendChild(fill);
+      box.appendChild(bar);
+      box.appendChild(el('span', 'lvl' + (lvl === 'Forte' ? ' f' : ''), lvl + ' · ' + nf(s.sep, 2)));
+      td.appendChild(box); tr.appendChild(td);
+      const tp = el('td', 'pick');
+      if (picked) tp.appendChild(el('span', 'pickmark', 'escolhida'));
+      tr.appendChild(tp);
+      body.appendChild(tr);
+    });
+  }
+
+  /* ---------- Passo 3: bando de gaviões ---------- */
+  const popGrid = $('popGrid'), rabbitRow = $('rabbitRow');
+  const rows = [], rabCells = [];
+  (function buildGrid() {
+    const head = $('colHead');
+    for (let d = 0; d < D; d++) { const s = el('span', '', String(d + 1)); s.title = FEATS[d].nome; head.appendChild(s); }
+    const mk = (parent, lbl) => {
+      parent.appendChild(el('span', 'dot'));
+      parent.appendChild(el('span', 'hn', lbl));
+      const cells = el('div', 'cells'), list = [];
+      for (let d = 0; d < D; d++) { const i = el('i'); i.title = FEATS[d].nome; cells.appendChild(i); list.push(i); }
+      parent.appendChild(cells);
+      return list;
+    };
+    mk(rabbitRow, 'P').forEach((i) => rabCells.push(i));
+    rabbitRow.firstChild.style.background = C.hawk;
+    for (let i = 0; i < N_HAWKS; i++) {
+      const row = el('div', 'hrow');
+      const list = mk(row, String(i + 1).padStart(2, '0'));
+      popGrid.appendChild(row);
+      rows.push({ dot: row.firstChild, cells: list });
+    }
+    const lg = $('mixLegend');
+    GROUPS.forEach((s, i) => {
+      const li = el('li'), sw = el('i', 'sw sq');
+      sw.style.background = C.g[i];
+      li.appendChild(sw);
+      const b = el('span'); b.innerHTML = '<b>' + s.nome + '</b> <span class="muted">' + s.det + '</span>';
+      li.appendChild(b);
+      lg.appendChild(li);
+    });
+  })();
+
+  let EXP = null, k3 = T_ITER, cur4 = NSTREAM - 1;
+  let timer3 = null, timer4 = null;
+
+  function renderGrid(k) {
+    const h = EXP.hho.hist[k];
+    for (let i = 0; i < N_HAWKS; i++) {
+      const r = rows[i];
+      r.dot.style.background = h.strat[i] < 0 ? C.muted : C.g[GROUP[h.strat[i]]];
+      for (let d = 0; d < D; d++) r.cells[d].className = h.masks[i][d] ? 'on' : '';
+    }
+    for (let d = 0; d < D; d++) rabCells[d].className = h.mask[d] ? 'on' : '';
+  }
+
+  function renderReadout3(k) {
+    const hist = EXP.hho.hist, h = hist[k];
+    $('out3').textContent = 'iteração ' + k + ' de ' + T_ITER;
+    const amp = k === 0 ? 2 : 2 * (1 - (k - 1) / T_ITER);
+    $('r3phase').textContent = k === 0 ? 'Início' : amp >= 1 ? 'Explorar e cercar' : 'Só cercar';
+    $('r3err').textContent = pct(h.err, 1);
+    $('r3n').textContent = h.n + ' de ' + D;
+    const box = $('r3chips');
+    box.innerHTML = '';
+    box.appendChild(el('span', 'lab', 'A presa usa:'));
+    for (let d = 0; d < D; d++) if (h.mask[d]) box.appendChild(el('span', 'chip', FEATS[d].nome));
+    /* narração em linguagem simples */
+    let txt;
+    const better = k > 0 && h.best < hist[k - 1].best - 1e-12;
+    if (k === 0) {
+      txt = 'Os 20 gaviões começam com combinações sorteadas ao acaso. A melhor delas já vira a presa, com erro de ' + pct(h.err, 1) + ' e ' + h.n + ' características.';
+    } else if (amp >= 1) {
+      txt = 'A energia de fuga E ainda pode passar de 1 (limite atual: ' + nf(amp, 2) + '), então parte do bando explora combinações novas e parte já cerca a presa.';
+    } else {
+      txt = 'A energia de fuga caiu abaixo de 1 (limite atual: ' + nf(amp, 2) + '). Agora todos cercam a presa e só refinam a combinação.';
+    }
+    if (k > 0) txt += better ? ' A presa melhorou nesta iteração: erro de ' + pct(h.err, 1) + ' com ' + h.n + ' características.' : ' A presa continua a mesma.';
+    $('story3').textContent = txt;
+  }
+
+  function drawFit(k) {
+    const g = fit($('cvFit'), 190), c = g.c, w = g.w, h = g.h;
+    const hist = EXP.hho.hist;
+    const L = 48, R = 10, Tp = 14, B = 30;
+    let lo = Infinity, hi = -Infinity;
+    hist.forEach((s) => { lo = Math.min(lo, s.best); hi = Math.max(hi, s.best); });
+    const pad = (hi - lo) * 0.18 || 0.01; lo -= pad; hi += pad;
+    const xs = (i) => L + (w - L - R) * i / T_ITER;
+    const ys = (v) => Tp + (h - Tp - B) * (1 - (v - lo) / (hi - lo));
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = rgba(C.hawk, 0.07);
+    c.fillRect(xs(0), Tp, xs(T_ITER / 2) - xs(0), h - Tp - B);
+    c.font = '11px "IBM Plex Sans", system-ui, sans-serif'; c.textAlign = 'left';
+    c.fillStyle = C.hawk;
+    c.fillText('exploração ainda possível', xs(0) + 6, Tp + 13);
+    c.fillStyle = C.muted;
+    c.fillText('só cerco', xs(T_ITER / 2) + 6, Tp + 13);
+    c.strokeStyle = C.line; c.lineWidth = 1; c.fillStyle = C.muted; c.textAlign = 'right';
+    c.font = '11px ' + MONO;
+    for (let i = 0; i <= 3; i++) {
+      const v = lo + (hi - lo) * i / 3, y = ys(v);
+      c.beginPath(); c.moveTo(L, y); c.lineTo(w - R, y); c.stroke();
+      c.fillText(nf(v, 3), L - 6, y + 4);
+    }
+    c.textAlign = 'center';
+    for (let i = 0; i <= T_ITER; i += 10) c.fillText(String(i), xs(i), h - 14);
+    c.font = '11px "IBM Plex Sans", system-ui, sans-serif';
+    c.fillText('iteração', (L + w - R) / 2, h - 1);
+    const path = (from, to) => {
+      c.beginPath(); c.moveTo(xs(from), ys(hist[from].best));
+      for (let i = from + 1; i <= to; i++) { c.lineTo(xs(i), ys(hist[i - 1].best)); c.lineTo(xs(i), ys(hist[i].best)); }
+    };
+    if (k < T_ITER) {
+      c.setLineDash([3, 4]); c.strokeStyle = rgba(C.hawk, 0.35); c.lineWidth = 1.5;
+      path(k, T_ITER); c.stroke(); c.setLineDash([]);
+    }
+    c.strokeStyle = C.hawk; c.lineWidth = 2.5; path(0, k); c.stroke();
+    c.fillStyle = C.hawk; c.beginPath(); c.arc(xs(k), ys(hist[k].best), 5, 0, 6.2832); c.fill();
+    $('cvFit').setAttribute('aria-label', 'Fitness da melhor combinação: de ' + nf(hist[0].best, 3) + ' na iteração 0 para ' + nf(hist[k].best, 3) + ' na iteração ' + k + '.');
+  }
+
+  function drawMix(k) {
+    const g = fit($('cvMix'), 170), c = g.c, w = g.w, h = g.h;
+    const hist = EXP.hho.hist;
+    const L = 30, R = 6, Tp = 8, B = 28;
+    const bw = (w - L - R) / T_ITER, ph = h - Tp - B;
+    c.clearRect(0, 0, w, h);
+    c.font = '11px ' + MONO; c.fillStyle = C.muted; c.textAlign = 'right';
+    [0, 10, 20].forEach((v) => {
+      const y = Tp + ph * (1 - v / N_HAWKS);
+      c.fillText(String(v), L - 6, y + 4);
+      c.strokeStyle = C.line; c.beginPath(); c.moveTo(L, y); c.lineTo(w - R, y); c.stroke();
+    });
+    for (let i = 1; i <= T_ITER; i++) {
+      const cnt = [0, 0, 0];
+      hist[i].strat.forEach((s) => cnt[GROUP[s]]++);
+      let y = Tp + ph;
+      const x = L + (i - 1) * bw;
+      for (let s = 0; s < 3; s++) {
+        const bh = ph * cnt[s] / N_HAWKS;
+        c.fillStyle = rgba(C.g[s], i <= k ? 1 : 0.18);
+        c.fillRect(x + 0.5, y - bh, Math.max(1, bw - 1), bh);
+        y -= bh;
+      }
+    }
+    c.fillStyle = C.muted; c.textAlign = 'center';
+    [1, 10, 20, 30, 40].forEach((i) => c.fillText(String(i), L + (i - 0.5) * bw, h - 14));
+    c.font = '11px "IBM Plex Sans", system-ui, sans-serif';
+    c.fillText('iteração (altura = nº de gaviões)', (L + w - R) / 2, h - 1);
+    $('cvMix').setAttribute('aria-label', 'Estratégias por iteração: exploração na primeira metade, cercos e mergulhos na segunda.');
+  }
+
+  function renderStage3(k) {
+    k3 = k;
+    $('slider3').value = String(k);
+    renderGrid(k); renderReadout3(k); drawFit(k); drawMix(k);
+  }
+  function stop3() { if (timer3) { clearInterval(timer3); timer3 = null; } $('btnPlay3').textContent = 'Reproduzir'; }
+  $('btnPlay3').addEventListener('click', () => {
+    if (!EXP) return;
+    if (timer3) { stop3(); return; }
+    let k = k3 >= T_ITER ? 0 : k3;
+    renderStage3(k);
+    $('btnPlay3').textContent = 'Pausar';
+    timer3 = setInterval(() => {
+      k++; renderStage3(k);
+      if (k >= T_ITER) stop3();
+    }, 220);
+  });
+  $('slider3').addEventListener('input', (e) => { stop3(); renderStage3(+e.target.value); });
+
+  /* ---------- Passo 4: fluxo de 2 minutos ---------- */
+  function drawStream(cur) {
+    const g = fit($('cvStream'), 346), c = g.c, w = g.w, h = g.h;
+    const st = EXP.stream;
+    const L = 56, R = 8, top = 44, chartB = 200;
+    const cw = (w - L - R) / NSTREAM;
+    const xt = (t) => L + cw * (t + 0.5);
+    let mx = 0; st.raw.forEach((r) => { mx = Math.max(mx, r[0]); });
+    const ymax = Math.max(5000, Math.ceil(mx / 5000) * 5000);
+    const ys = (v) => chartB - (chartB - top) * v / ymax;
+    const SANS = '12px "IBM Plex Sans", system-ui, sans-serif';
+    c.clearRect(0, 0, w, h);
+    c.font = '11px ' + MONO;
+    c.textAlign = 'right'; c.fillStyle = C.muted; c.strokeStyle = C.line; c.lineWidth = 1;
+    for (let v = 0; v <= ymax; v += 5000) {
+      const y = ys(v);
+      c.beginPath(); c.moveTo(L, y); c.lineTo(w - R, y); c.stroke();
+      c.fillText(v === 0 ? '0' : (v / 1000) + ' mil', L - 6, y + 4);
+    }
+    const narrow = w < 560;
+    c.font = SANS; c.textAlign = 'left'; c.fillText(narrow ? 'pkt/s' : 'pacotes por segundo', 4, 12);
+    const band = (a, b, col, soft, label) => {
+      c.fillStyle = soft; c.fillRect(L + cw * a, top - 10, cw * (b - a), chartB - top + 10);
+      c.fillStyle = col; c.font = '600 12px "IBM Plex Sans", system-ui, sans-serif'; c.textAlign = 'left';
+      c.fillText(label, L + cw * a + 4, top - 14);
+    };
+    band(FLASH_START, FLASH_END, C.hawk, rgba(C.hawk, 0.12), narrow ? 'pico' : 'pico legítimo');
+    band(ATT_START, ATT_END, C.attack, rgba(C.attack, 0.09), narrow ? 'ataque' : 'ataque real');
+    for (let t = 1; t <= cur; t++) {
+      const col = st.predSel[t] ? C.attack : C.normal;
+      const x0 = xt(t - 1), x1 = xt(t), y0 = ys(st.raw[t - 1][0]), y1 = ys(st.raw[t][0]);
+      c.fillStyle = rgba(col, 0.16);
+      c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.lineTo(x1, chartB); c.lineTo(x0, chartB); c.closePath(); c.fill();
+      c.strokeStyle = col; c.lineWidth = 2.2;
+      c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke();
+    }
+    const rowsDef = [
+      { y: 230, lab: narrow ? 'Verdade' : 'Verdade (o que realmente aconteceu)', arr: st.truth },
+      { y: 266, lab: narrow ? 'HHO + kNN (' + EXP.selIdx.length + ')' : 'HHO + kNN com ' + EXP.selIdx.length + ' características', arr: st.predSel },
+      { y: 302, lab: narrow ? 'kNN com as 14' : 'kNN com as 14 características', arr: st.predAll }
+    ];
+    rowsDef.forEach((r) => {
+      c.font = '600 12px "IBM Plex Sans", system-ui, sans-serif';
+      c.fillStyle = C.ink; c.textAlign = 'left'; c.fillText(r.lab, L, r.y - 6);
+      for (let t = 0; t < NSTREAM; t++) {
+        if (t <= cur) c.fillStyle = r.arr[t] ? C.attack : rgba(C.normal, 0.22);
+        else c.fillStyle = C.soft;
+        c.fillRect(L + t * cw + 0.4, r.y, Math.max(1, cw - 0.8), 16);
+      }
+    });
+    const m = st.mSel;
+    if (m.alertT >= 0 && m.alertT <= cur) {
+      const x = xt(m.alertT);
+      c.strokeStyle = C.attack; c.lineWidth = 1.5; c.setLineDash([4, 3]);
+      c.beginPath(); c.moveTo(x, top - 4); c.lineTo(x, 320); c.stroke(); c.setLineDash([]);
+      const txt = 'ALERTA em ' + m.alertT + ' s';
+      c.font = '600 12px "IBM Plex Sans", system-ui, sans-serif';
+      const tw = c.measureText(txt).width;
+      const left = x + 6 + tw < w - R;
+      c.fillStyle = C.attack; c.textAlign = left ? 'left' : 'right';
+      c.fillText(txt, left ? x + 6 : x - 6, top - 2);
+    }
+    if (cur < NSTREAM - 1) {
+      c.strokeStyle = rgba(C.ink, 0.5); c.lineWidth = 1;
+      c.beginPath(); c.moveTo(xt(cur), top - 4); c.lineTo(xt(cur), 320); c.stroke();
+    }
+    c.fillStyle = C.muted; c.font = '11px ' + MONO; c.textAlign = 'center';
+    for (let t = 0; t <= NSTREAM; t += (narrow ? 40 : 20)) c.fillText(t + ' s', Math.min(w - 14, Math.max(L, L + cw * t)), h - 4);
+    $('cvStream').setAttribute('aria-label', 'Fluxo de 120 segundos. Pico legítimo entre 14 e 22 segundos, ataque real entre ' + ATT_START + ' e ' + ATT_END + ' segundos. O HHO com kNN disparou o alerta ' + (m.alertT >= 0 ? 'em ' + m.alertT + ' segundos' : 'em nenhum momento') + '.');
+  }
+
+  function renderStage4(cur) {
+    cur4 = cur;
+    $('slider4').value = String(cur);
+    const st = EXP.stream, r = st.raw[cur];
+    const on = st.mSel.alarm[cur];
+    const b = $('badge4');
+    b.textContent = on ? 'Alerta DDoS' : 'Tráfego normal';
+    b.className = 'badge' + (on ? ' alert' : '');
+    $('live4').textContent = 't = ' + cur + ' s · ' + nf(r[0]) + ' pacotes/s · ' + nf(r[3]) + ' IPs de origem · ' + pct(r[4], 0) + ' SYN';
+    $('out4').textContent = 't = ' + cur + ' s';
+    drawStream(cur);
+  }
+  function stop4() { if (timer4) { clearInterval(timer4); timer4 = null; } $('btnPlay4').textContent = 'Reproduzir fluxo'; }
+  $('btnPlay4').addEventListener('click', () => {
+    if (!EXP) return;
+    if (timer4) { stop4(); return; }
+    let t = cur4 >= NSTREAM - 1 ? 0 : cur4;
+    renderStage4(t);
+    $('btnPlay4').textContent = 'Pausar';
+    timer4 = setInterval(() => {
+      t++; renderStage4(t);
+      if (t >= NSTREAM - 1) stop4();
+    }, 80);
+  });
+  $('slider4').addEventListener('input', (e) => { stop4(); renderStage4(+e.target.value); });
+
+  function renderCmp() {
+    const a = EXP.stream.mAll, s = EXP.stream.mSel, n = EXP.selIdx.length;
+    const dl = (m) => (m.delay === null ? 'sem alerta' : m.delay + ' s depois do início');
+    const data = [
+      ['Características usadas', D, n],
+      ['Acerto em 200 janelas novas, que o HHO nunca viu', pct(EXP.accAll), pct(EXP.accSel)],
+      ['Falsos alarmes: janelas normais marcadas como ataque', a.fp + ' de ' + a.nN, s.fp + ' de ' + s.nN],
+      ['Janelas de ataque não marcadas', a.miss + ' de ' + a.nA, s.miss + ' de ' + s.nA],
+      ['Alerta disparou', dl(a), dl(s)],
+      ['Cálculo por janela (comparado ao uso das 14)', '100%', pct(n / D, 0)]
+    ];
+    const body = $('cmpBody');
+    body.innerHTML = '';
+    data.forEach((row) => {
+      const tr = el('tr');
+      tr.appendChild(el('td', '', row[0]));
+      tr.appendChild(el('td', 'other', String(row[1])));
+      tr.appendChild(el('td', 'best', String(row[2])));
+      body.appendChild(tr);
+    });
+    const m = EXP.stream.mSel;
+    const res = $('res4');
+    res.innerHTML = '';
+    const p1 = el('p');
+    if (m.alertT >= 0) {
+      p1.innerHTML = '<b>Resultado:</b> o alerta disparou em t = ' + m.alertT + ' s, ' + m.delay + ' s depois do início do ataque, usando só ' + n + ' das 14 características.';
+    } else {
+      p1.innerHTML = '<b>Resultado:</b> com esta semente, o HHO + kNN não disparou alerta durante o ataque.';
+    }
+    const p2 = el('p', 'muted', s.fp + ' de ' + s.nN + ' janelas normais foram marcadas por engano e ' + s.miss + ' de ' + s.nA + ' janelas de ataque passaram sem marca. O pico legítimo de 14 s a 22 s ' + (m.alarm.slice(FLASH_START, FLASH_END + 3).some(Boolean) ? 'chegou a disparar um alarme falso.' : 'não disparou alarme.'));
+    res.appendChild(p1); res.appendChild(p2);
+  }
+
+  /* ---------- Montagem ---------- */
+  function renderAll() {
+    stop3(); stop4();
+    $('slider3').max = String(T_ITER);
+    renderTable(EXP);
+    renderStage3(T_ITER);
+    renderStage4(NSTREAM - 1);
+    renderCmp();
+  }
+  function load(seed) {
+    const status = $('status'), go = $('seedGo');
+    status.textContent = 'Calculando…'; go.disabled = true;
+    setTimeout(() => {
+      try {
+        EXP = buildExperiment(seed);
+        renderAll();
+        status.textContent = '';
+      } catch (err) {
+        status.textContent = 'Erro ao calcular: ' + err.message;
+      }
+      go.disabled = false;
+    }, 30);
+  }
+  $('seedForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = Math.max(1, Math.min(9999, parseInt($('seed').value, 10) || 16));
+    $('seed').value = String(v);
+    load(v);
+  });
+
+  let rz = null;
+  const redraw = () => {
+    flowN.layout(); flowA.layout(); flowN.render(clock); flowA.render(clock);
+    if (EXP) { drawFit(k3); drawMix(k3); drawStream(cur4); }
+  };
+  window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(redraw, 120); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(redraw);
+  load(16);
+})();
+</script>
+
+</body></html>
